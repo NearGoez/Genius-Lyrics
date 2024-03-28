@@ -1,24 +1,52 @@
 import requests
-import json
 from bs4 import BeautifulSoup as bs
+import asyncio
+import aiohttp
+import time
+
+start = time.perf_counter()
+
 links = []
 
+def get_tasks(session):
+    tasks = []
+    for x in range(1,11):
+        r = tasks.append(session.get('https://genius.com/api/songs/chart?time_period=day&chart_genre=rap&page={}&per_page=10&text_format=html%2Cmarkdown'.format(x), ssl=False)) 
+    return tasks
+
+async def get_links():
+    async with aiohttp.ClientSession() as session:
+        tasks = get_tasks(session)
+        responses = await asyncio.gather(*tasks)
+        for r in responses:
+            data = await r.json()
+            for y in range(10):
+                links.append(data['response']['chart_items'][y]['item']['url'])  
+asyncio.run(get_links()) 
+for x in links:
+    print(x)
+def get_tasks(session):
+    tasks = []
+    for link in links:
+        r = tasks.append(session.get(link, ssl=False))
+    return tasks
+lyrics = []
+async def get_lyrics():
+    async with aiohttp.ClientSession() as session:
+        tasks = get_tasks(session)
+        responses = await asyncio.gather(*tasks)
+        for r in responses:
+            lyrics.append(await r.text())
+
+asyncio.run(get_lyrics())
+
+for lyric in lyrics:
+    soup = bs(lyric, 'html.parser')
+    fragments = soup.find_all(class_ = 'Lyrics__Container-sc-1ynbvzw-1 kUgSbL')
+    for fragment in fragments:
+        print(fragment.get_text())
+    print('\n\n\n\n\n')
 
 
-for x in range(1, 11): 
-    r = requests.get(f"https://genius.com/api/songs/chart?time_period=month&chart_genre=rap&page={x}&per_page=10&text_format=html%2Cmarkdown")
-
-    datapage = r.json()
-    for x in range(1, 10):
-        print("\n\n\n")
-        #getting the title too 
-        link = datapage["response"]["chart_items"][x]["item"]["url"]       
-        title= datapage["response"]["chart_items"][x]["item"]["full_title"]       
-
-        r = requests.get(link)
-        soup = bs(r.text, "html.parser")
-        fragment = soup.find_all(class_= "Lyrics__Container-sc-1ynbvzw-1 kUgSbL")
-
-        for x in fragment:
-            print(title,"\n", x.text)
-
+end = time.perf_counter()
+print('el programa tomo {} segundos en ejecutarse'.format((end-start)))
